@@ -13,11 +13,11 @@ Usage:
 
 import logging
 from collections import Counter
-from typing import Any
+from typing import Any, Dict, List
 
 log = logging.getLogger(__name__)
 
-KNOWN_SELECTORS: dict[str, str] = {
+KNOWN_SELECTORS: Dict[str, str] = {
     "a9059cbb": "transfer(address,uint256)",
     "23b872dd": "transferFrom(address,address,uint256)",
     "095ea7b3": "approve(address,uint256)",
@@ -38,7 +38,7 @@ class TxnAnalyzer:
     def __init__(self, etherscan_client):
         self.client = etherscan_client
 
-    def analyze(self, address: str, limit: int = 50) -> dict[str, Any]:
+    def analyze(self, address: str, limit: int = 50) -> Dict[str, Any]:
         result = self.client.get_transaction_list(address, limit=limit)
         if not result.get("success"):
             return self._empty(address, error=result.get("error", "fetch failed"))
@@ -47,10 +47,10 @@ class TxnAnalyzer:
         if not txns:
             return self._empty(address, error="no transactions found")
 
-        callers: set[str] = set()
+        callers: set = set()
         selector_counts: Counter = Counter()
-        large_value_txs: list[dict] = []
-        new_contract_callers: list[str] = []
+        large_value_txs: List[Dict] = []
+        new_contract_callers: List[str] = []
 
         for tx in txns:
             sender = tx.get("from", "").lower()
@@ -102,8 +102,8 @@ class TxnAnalyzer:
         }
 
     def _detect_anomalies(self, callers, selector_counts, unknown_selectors,
-                          large_value_txs, new_contract_callers, total_txns) -> list[str]:
-        flags: list[str] = []
+                          large_value_txs, new_contract_callers, total_txns) -> List[str]:
+        flags: List[str] = []
 
         if unknown_selectors and len(callers) > 10:
             flags.append(
@@ -136,7 +136,7 @@ class TxnAnalyzer:
         return flags
 
     @staticmethod
-    def _empty(address: str, error: str = "") -> dict[str, Any]:
+    def _empty(address: str, error: str = "") -> Dict[str, Any]:
         return {
             "address": address, "tx_count_analyzed": 0, "unique_callers": 0,
             "selector_distribution": {}, "unknown_selectors": [],

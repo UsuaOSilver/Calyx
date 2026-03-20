@@ -40,6 +40,12 @@ from typing import Any, Dict, List, Optional
 # Ensure project root on path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).parent.parent / ".env")
+except ImportError:
+    pass
+
 
 # ── ANSI color helpers ────────────────────────────────────────────────────────
 
@@ -392,6 +398,8 @@ def _print_audit_report(result: Dict[str, Any]) -> None:
         exploit = f.get("exploit_scenario", "")
         if exploit:
             print(f"    {dim('Exploit:')}")
+            if isinstance(exploit, list):
+                exploit = "\n".join(str(e) for e in exploit)
             for line in exploit.split("\n"):
                 if line.strip():
                     print(f"      {line.strip()}")

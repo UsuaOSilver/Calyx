@@ -150,8 +150,8 @@ class CFGDeobfuscator:
         if op == "AND":  return a & b
         if op == "OR":   return a | b
         if op == "XOR":  return a ^ b
-        if op == "SHL":  return (b << a) & mask
-        if op == "SHR":  return b >> a
+        if op == "SHL":  return 0 if a >= 256 else (b << a) & mask
+        if op == "SHR":  return 0 if a >= 256 else b >> a
         return 0
 
     @staticmethod
