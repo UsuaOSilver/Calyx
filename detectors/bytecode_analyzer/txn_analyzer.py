@@ -3,7 +3,7 @@
 Historical transaction anomaly analyzer.
 
 Fetches the last N transactions for a contract address via EtherscanClient
-and detects patterns associated with SKANF AM1-AM5 vulnerabilities.
+and detects patterns associated with SKANF AM1-AM8 vulnerabilities.
 
 Usage:
     from detectors.bytecode_analyzer.txn_analyzer import TxnAnalyzer

@@ -1,5 +1,5 @@
 # Core blockchain analysis
-pyevmasm>=0.6.1
+pyevmasm>=0.2.3
 requests>=2.31.0
 
 # GNN
