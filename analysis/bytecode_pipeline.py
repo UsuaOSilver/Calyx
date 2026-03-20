@@ -8,7 +8,7 @@ Pipeline stages:
   Stage 3b: CFGProfiler       — obfuscation score from resolved CFG
   Stage 4:  TxnAnalyzer       — historical transaction anomaly flags (optional)
   Stage 5a: TaintAnalyzer     — static taint analysis for AM1/AM2 (Gap 2)
-  Stage 5b: AMPatternDetector — heuristic AM3/AM4/AM5 pattern detection
+  Stage 5b: AMPatternDetector — heuristic AM3/AM4/AM5/AM7/AM8 pattern detection
   Stage 5c: BytecodeGNNAnalyzer — GNN inference on deobfuscated CFG graphs
   Stage 6:  RiskScorer        — 3-signal weighted risk score
   Stage 7:  ExploitValidator  — fork-EVM confirmation via Anvil (Gap 3, optional)
@@ -81,7 +81,7 @@ class BytecodePipeline:
                  f"— types: {taint_result['am_types_found']}, "
                  f"caller_guarded={taint_result['caller_guarded']}")
 
-        # Stage 5b: Pattern detection for AM3/AM4/AM5
+        # Stage 5b: Pattern detection for AM3/AM4/AM5/AM7/AM8
         am_result   = self._detector.detect(bytecode_hex)
         am_findings = am_result["findings"]
         log.info(f"AM pattern detector: {len(am_findings)} findings "
