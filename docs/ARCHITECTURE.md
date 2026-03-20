@@ -1,4 +1,4 @@
-# Calyx — System Architecture
+# System Architecture
 
 ## Pipeline Overview
 
