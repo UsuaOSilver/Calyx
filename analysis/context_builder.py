@@ -103,7 +103,7 @@ class ContextBuilder:
         # ── Risk Breakdown ────────────────────────────────────────────────────
         lines += self._section_risk_breakdown(r)
 
-        # ── TAC-Style Control Flow Summary (T1 -- arXiv:2506.19624) ─────────
+        # ── TAC-Style Control Flow Summary ────────────────────────────────────
         lines += self._section_tac_summary(r)
 
         # ── LLM Prompt Guidance ───────────────────────────────────────────────
@@ -162,6 +162,7 @@ class ContextBuilder:
                 "block_count":         gnn_res.get("block_count", 0),
                 "edge_count":          gnn_res.get("edge_count", 0),
             },
+            "tac_summary":  self._build_tac_summary(r),
             "transactions": {
                 "anomaly_score":    txn_res.get("anomaly_score", 0.0),
                 "anomaly_flags":    txn_res.get("anomaly_flags", []),
@@ -461,49 +462,93 @@ class ContextBuilder:
 
     @staticmethod
     def _section_tac_summary(r: Dict[str, Any]) -> List[str]:
-        """TAC-style control flow summary (T1 -- arXiv:2506.19624).
-        Structured block representation for LLM reasoning on closed-source contracts.
-        Addresses Sen Yang direction: making control-flow information readable."""
+        """
+        TAC-style control-flow summary (T1 — arXiv:2506.19624).
+
+        Generates a structured, human-readable pseudo-TAC representation from the
+        CFG deobfuscation output. Addresses Sen Yang's challenge: "making [deobfuscated]
+        control-flow information readable still needs more exploration."
+
+        This section gives LLMs a linearized view of the bytecode's block structure —
+        block count, edges, obfuscation level, and function entry points — without
+        requiring source code, enabling better reasoning about closed-source contracts.
+        """
         cfg_deob    = r.get("cfg_deob", {})
         cfg_profile = r.get("cfg_profile", {})
-        func_split  = r.get("function_split", {})
+        func_split  = r.get("function_split", {})   # populated by split_by_selector() if run
+
         if not cfg_deob and not cfg_profile:
             return []
-        obs  = cfg_profile.get("obfuscation_score", 0.0) if cfg_profile else 0.0
-        asmt = cfg_profile.get("assessment", "unknown") if cfg_profile else "unknown"
+
+        block_count = cfg_deob.get("block_count", "N/A")
+        edge_count  = cfg_deob.get("edge_count", "N/A")
+        resolved    = cfg_deob.get("resolved", "N/A")
+        approx      = cfg_deob.get("approximated", "N/A")
+        obs_score   = cfg_profile.get("obfuscation_score", 0.0) if cfg_profile else 0.0
+        assessment  = cfg_profile.get("assessment", "unknown") if cfg_profile else "unknown"
+        instr_count = cfg_profile.get("instruction_count", "N/A") if cfg_profile else "N/A"
+
         lines = [
             "## TAC-Style Control Flow Summary (T1)",
             "",
-            "> Structured control-flow for LLM analysis (arXiv:2506.19624 + SKANF author direction).",
+            "> Structured control-flow representation for LLM analysis "
+            "(per arXiv:2506.19624 + SKANF author direction: "
+            "'making control-flow information readable still needs more exploration').",
             "",
             "```",
-            f"BYTECODE_SIZE   : {cfg_profile.get('instruction_count', 'N/A') if cfg_profile else 'N/A'} instructions",
-            f"CFG_BLOCKS      : {cfg_deob.get('block_count', 'N/A')}",
-            f"CFG_EDGES       : {cfg_deob.get('edge_count', 'N/A')}",
-            f"RESOLVED_JUMPS  : {cfg_deob.get('resolved', 'N/A')}",
-            f"OBF_SCORE       : {obs:.3f}  [{asmt.upper()}]",
+            f"BYTECODE_SIZE   : {instr_count} instructions",
+            f"CFG_BLOCKS      : {block_count}",
+            f"CFG_EDGES       : {edge_count}",
+            f"RESOLVED_JUMPS  : {resolved}",
+            f"APPROX_JUMPS    : {approx}",
+            f"OBF_SCORE       : {obs_score:.3f}  [{assessment.upper()}]",
         ]
+
+        # Add function entry points if split_by_selector was run
         functions = func_split.get("functions", {}) if func_split else {}
         if functions:
             lines.append(f"FUNCTION_COUNT  : {len(functions)}")
+            lines.append("")
             lines.append("FUNCTION_DISPATCH_TABLE:")
             for sel, info in list(functions.items())[:10]:
-                lines.append(f"  {sel:>12s}  ->  JUMPDEST@{info.get('entry_pc', '?')}")
+                lines.append(f"  {sel:>12s}  →  JUMPDEST@{info.get('entry_pc', '?')}")
+            if len(functions) > 10:
+                lines.append(f"  ... ({len(functions) - 10} more)")
+        else:
+            lines.append("FUNCTION_COUNT  : (run split_by_selector() to populate)")
+
+        # Obfuscation commentary
+        lines.append("")
+        if obs_score > 0.3:
+            lines.append(
+                "NOTE: High obfuscation score — AI decompilation tools (e.g. Dedaub) are "
+                "known to fail on contracts with this profile (Sen Yang, 2026-03-11). "
+                "SKANF CFG deobfuscation applied before this analysis."
+            )
+        elif obs_score > 0.0:
+            lines.append(
+                "NOTE: Partial obfuscation detected — CFG resolved via over-approximation."
+            )
+        else:
+            lines.append("NOTE: No indirect jumps detected — CFG is fully direct.")
+
         lines += ["```", ""]
         return lines
 
     @staticmethod
     def _build_tac_summary(r: Dict[str, Any]) -> Dict[str, Any]:
-        cfg_deob   = r.get("cfg_deob", {})
+        """Build the tac_summary dict for build_json() output."""
+        cfg_deob    = r.get("cfg_deob", {})
         cfg_profile = r.get("cfg_profile", {})
         func_split  = r.get("function_split", {})
         return {
-            "block_count":       cfg_deob.get("block_count") if cfg_deob else None,
-            "edge_count":        cfg_deob.get("edge_count") if cfg_deob else None,
+            "block_count":      cfg_deob.get("block_count") if cfg_deob else None,
+            "edge_count":       cfg_deob.get("edge_count") if cfg_deob else None,
+            "resolved_jumps":   cfg_deob.get("resolved") if cfg_deob else None,
             "obfuscation_score": cfg_profile.get("obfuscation_score", 0.0) if cfg_profile else 0.0,
-            "assessment":        cfg_profile.get("assessment", "unknown") if cfg_profile else "unknown",
-            "functions":         func_split.get("functions", {}) if func_split else {},
-            "function_count":    func_split.get("function_count", 0) if func_split else 0,
+            "assessment":       cfg_profile.get("assessment", "unknown") if cfg_profile else "unknown",
+            "functions":        func_split.get("functions", {}) if func_split else {},
+            "function_count":   func_split.get("function_count", 0) if func_split else 0,
         }
 
     @staticmethod

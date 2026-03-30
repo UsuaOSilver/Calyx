@@ -1,42 +1,298 @@
+# Calyx .gitignore
+
+# =============================================================================
 # Python
+# =============================================================================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
 venv/
 env/
-.env
-*.egg-info/
-dist/
-build/
+ENV/
+env.bak/
+venv.bak/
+.venv/
 
-# Models
-models/checkpoints/*.pt
-!models/checkpoints/bytecode_model.pt
-
-# Data
-data/datasets/processed/
-data/rag_index/
-
-# IDE
-.vscode/
+# PyCharm
 .idea/
-*.swp
-*.swo
 
-# Logs
-logs/
-*.log
+# VS Code
+.vscode/
+*.code-workspace
 
-# OS
-.DS_Store
-Thumbs.db
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
 
-# Test cache
+# PyTest
 .pytest_cache/
 .coverage
 htmlcov/
+.tox/
+.nox/
 
-# Claude Code
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# =============================================================================
+# Node.js / Frontend
+# =============================================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# =============================================================================
+# Data & Models
+# =============================================================================
+
+# Large data files
+data/raw/*.csv
+data/raw/*.json
+data/processed/*.pkl
+data/datasets/*.h5
+data/datasets/*.hdf5
+
+# Model checkpoints
+models/checkpoints/*.pt
+models/checkpoints/*.pth
+models/checkpoints/*.ckpt
+models/checkpoints/*.h5
+
+# Training logs
+logs/
+*.log
+wandb/
+tensorboard/
+
+# ChromaDB vector database
+chroma_db/
+*.chroma
+
+# =============================================================================
+# Secrets & Credentials
+# =============================================================================
+.env
+.env.local
+.env.*.local
+.env.backup
+*.key
+*.pem
+*.p12
+secrets/
+credentials/
+
+# Private keys (CRITICAL)
+*private_key*
+*_key.json
+keystore/
+
+# API keys
+api_keys.txt
+*.apikey
+
+# =============================================================================
+# Operating System
+# =============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# =============================================================================
+# IDEs & Editors
+# =============================================================================
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+
+# =============================================================================
+# Docker
+# =============================================================================
+.dockerignore
+
+# =============================================================================
+# Testing
+# =============================================================================
+.coverage
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+htmlcov/
+
+# =============================================================================
+# Temporary Files
+# =============================================================================
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+
+# =============================================================================
+# Database
+# =============================================================================
+*.db
+*.sqlite
+*.sqlite3
+
+# PostgreSQL
+*.dump
+*.sql
+
+# =============================================================================
+# Blockchain Specific
+# =============================================================================
+
+# Foundry
+cache/
+out/
+broadcast/
+
+# Hardhat
+artifacts/
+cache/
+typechain/
+typechain-types/
+
+# Truffle
+contracts/build/
+
+# =============================================================================
+# Monitoring & Metrics
+# =============================================================================
+prometheus/
+grafana/data/
+
+# =============================================================================
+# Documentation (build artifacts)
+# =============================================================================
+docs/_build/
+docs/.doctrees/
+site/
+
+# =============================================================================
+# Project Specific
+# =============================================================================
+
+# Audit reports (too large for git)
+data/collectors/raw/*.pdf
+data/collectors/raw/*.html
+
+# Processed datasets (regenerate from raw)
+data/datasets/processed/
+
+# Model training outputs
+models/training_logs/
+models/experiments/
+
+# API response cache
+.cache/
+*.cache
+
+# Demo data (can be large)
+data/samples/*.json
+!data/samples/bybit_attack.json
+
+# Temporary upload files
+uploads/
+temp/
+
+# Claude Code local config
 .claude/
+
+# Large generated datasets (regenerate via collectors + train pipeline)
+data/datasets/bytecode/
+data/datasets/bytecode_merged/
+data/datasets/real_bytecode/
+data/collectors/bytecode_cache.jsonl
+data/collectors/.scraper_progress.json
+data/rag_index/
+results/
