@@ -48,7 +48,7 @@ MEMPOOL_WS_URL=wss://eth-mainnet.g.alchemy.com/v2/YOUR_KEY       # WebSocket for
 
 ```bash
 git clone <repo-url>
-cd Calyx-dev
+cd Calyx
 
 pip install -r requirements.txt
 

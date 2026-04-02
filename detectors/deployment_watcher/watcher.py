@@ -42,8 +42,9 @@ log = logging.getLogger(__name__)
 # ── Configuration ─────────────────────────────────────────────────────────────
 
 _DEFAULT_POLL_INTERVAL = 15       # seconds between Etherscan polls
-_DEFAULT_LOOKBACK_BLOCKS = 50     # how many blocks to scan on first run
+_DEFAULT_LOOKBACK_BLOCKS = 5      # how many blocks to scan on first run
 _MAX_CREATIONS_PER_POLL = 50      # cap per poll cycle to avoid runaway
+_MAX_BLOCKS_PER_POLL = 5          # max blocks to scan per cycle (≈1 block/12s on ETH)
 _BYTECODE_MIN_LENGTH = 20         # minimum hex chars (beyond "0x") to consider real
 
 
@@ -171,19 +172,58 @@ class DeploymentWatcher:
                 log.error(f"on_deploy callback error for {address}: {exc}")
                 self._stats["errors"] += 1
 
+    # ── Etherscan V2 helpers ───────────────────────────────────────────────────
+
+    def _v2_proxy(self, action: str, extra: Optional[Dict] = None) -> Any:
+        """
+        Call Etherscan V2 Geth/Parity proxy with correct chainid.
+        Returns the 'result' field, or None on error.
+        """
+        import requests
+        chain_id = getattr(self._client, "CHAIN_IDS", {}).get(self._network, 1)
+        v2_base  = getattr(self._client, "V2_BASE",
+                           "https://api.etherscan.io/v2/api")
+        params: Dict[str, Any] = {
+            "chainid": chain_id,
+            "module":  "proxy",
+            "action":  action,
+            "apikey":  self._client.api_key,
+        }
+        if extra:
+            params.update(extra)
+        try:
+            resp = requests.get(v2_base, params=params, timeout=15)
+            data = resp.json()
+            log.debug(f"v2_proxy {action}: {str(data)[:120]}")
+            return data.get("result")
+        except Exception as exc:
+            log.debug(f"v2_proxy {action} failed: {exc}")
+            return None
+
     # ── Etherscan queries ─────────────────────────────────────────────────────
+
+    def _get_latest_block(self) -> Optional[int]:
+        """Get the current block number via Etherscan V2 proxy."""
+        result = self._v2_proxy("eth_blockNumber")
+        if isinstance(result, str) and result.startswith("0x"):
+            return int(result, 16)
+        log.debug(f"eth_blockNumber unexpected result: {result!r}")
+        return None
 
     def _get_recent_creations(
         self,
         from_block: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """
-        Query Etherscan for recent contract creation transactions.
+        Scan recent blocks for contract creation transactions.
 
-        Uses two approaches:
-        1. Internal transactions (txlistinternal) with type=create
-           — catches CREATE/CREATE2 from factory contracts
-        2. Normal transactions (txlist) where to="" (direct deployments)
+        Strategy: fetch each block with full transactions via eth_getBlockByNumber,
+        filter for txns where `to` is null (direct EOA → contract deployments),
+        then call eth_getTransactionReceipt to get the deployed contractAddress.
+
+        Catches all direct deploys (CREATE opcode from EOA).
+        Factory deploys (CREATE2 via proxy) are skipped — they require internal
+        txn tracing which needs a paid Etherscan plan.
 
         Returns list of:
           {"address": str, "deployer": str, "tx_hash": str, "block_number": int}
@@ -191,78 +231,74 @@ class DeploymentWatcher:
         creations: List[Dict[str, Any]] = []
         seen_addrs: Set[str] = set()
 
-        start_block = from_block or 0
+        latest = self._get_latest_block()
+        if latest is None:
+            log.warning("Cannot determine latest block — skipping poll cycle")
+            return []
 
-        # ── Approach 1: internal txns (catches factory deploys) ──────────
-        try:
-            params = {
-                "module": "account",
-                "action": "txlistinternal",
-                "startblock": start_block,
-                "endblock": 99999999,
-                "page": 1,
-                "offset": _MAX_CREATIONS_PER_POLL,
-                "sort": "desc",
-                "apikey": self._client.api_key,
-            }
-            import requests
-            resp = requests.get(self._client.base_url, params=params, timeout=15)
-            data = resp.json()
+        start = from_block if from_block is not None else max(0, latest - _DEFAULT_LOOKBACK_BLOCKS)
+        # Cap scan range to avoid excessive API calls
+        end = min(latest, start + _MAX_BLOCKS_PER_POLL - 1)
 
-            if data.get("status") == "1" and data.get("result"):
-                for tx in data["result"]:
-                    # Internal create transactions have type "create" or "create2"
-                    # and a non-empty contractAddress field
-                    tx_type = tx.get("type", "").lower()
-                    contract_addr = tx.get("contractAddress", "").lower()
+        if start > end:
+            return []
 
-                    if tx_type in ("create", "create2") and contract_addr:
-                        if contract_addr not in seen_addrs:
-                            seen_addrs.add(contract_addr)
-                            creations.append({
-                                "address": contract_addr,
-                                "deployer": tx.get("from", "").lower(),
-                                "tx_hash": tx.get("hash", ""),
-                                "block_number": _safe_int(tx.get("blockNumber", "0")),
-                            })
-        except Exception as exc:
-            log.debug(f"Internal txlist query failed: {exc}")
+        log.debug(f"Scanning blocks {start}–{end} (latest={latest})")
 
-        # ── Approach 2: normal txns where to="" (direct EOA deploys) ─────
-        # This is less reliable for high-volume monitoring but catches
-        # the common case of a deployer EOA creating a contract directly.
-        # Skipped if we already found creations from internal txns,
-        # since most factory deploys are the interesting ones.
-        if not creations:
+        for block_num in range(start, end + 1):
+            if len(creations) >= _MAX_CREATIONS_PER_POLL:
+                break
             try:
-                # Use a broader query — look for transactions to null address
-                # This requires knowing the deployer address, which we don't have
-                # in a general monitoring context. For now, we rely on approach 1.
-                # A future enhancement would subscribe to block events directly.
-                pass
-            except Exception:
-                pass
+                block = self._v2_proxy(
+                    "eth_getBlockByNumber",
+                    {"tag": hex(block_num), "boolean": "true"},
+                )
+                if not block or not isinstance(block, dict):
+                    log.debug(f"Block {block_num}: empty or non-dict result")
+                    continue
 
-        return creations[:_MAX_CREATIONS_PER_POLL]
+                txns = block.get("transactions") or []
+                log.debug(f"Block {block_num}: {len(txns)} transactions")
 
-    def _get_latest_block(self) -> Optional[int]:
-        """Get the current block number from Etherscan."""
-        try:
-            import requests
-            params = {
-                "module": "proxy",
-                "action": "eth_blockNumber",
-                "apikey": self._client.api_key,
-            }
-            resp = requests.get(self._client.base_url, params=params, timeout=10)
-            data = resp.json()
-            result = data.get("result", "0x0")
-            if isinstance(result, str) and result.startswith("0x"):
-                return int(result, 16)
+                for tx in txns:
+                    # Direct contract creation: `to` is null or empty string
+                    to_field = tx.get("to")
+                    if to_field is not None and to_field != "":
+                        continue
+
+                    tx_hash = tx.get("hash", "")
+                    if not tx_hash:
+                        continue
+
+                    contract_addr = self._receipt_contract_address(tx_hash)
+                    if not contract_addr or contract_addr in seen_addrs:
+                        continue
+
+                    seen_addrs.add(contract_addr)
+                    creations.append({
+                        "address":      contract_addr,
+                        "deployer":     (tx.get("from") or "").lower(),
+                        "tx_hash":      tx_hash,
+                        "block_number": _safe_int(block.get("number", "0")),
+                    })
+
+                    if len(creations) >= _MAX_CREATIONS_PER_POLL:
+                        break
+
+            except Exception as exc:
+                log.debug(f"Block {block_num} scan error: {exc}")
+
+        return creations
+
+    def _receipt_contract_address(self, tx_hash: str) -> Optional[str]:
+        """Fetch transaction receipt and return the deployed contractAddress."""
+        result = self._v2_proxy("eth_getTransactionReceipt", {"txhash": tx_hash})
+        if not isinstance(result, dict):
             return None
-        except Exception as exc:
-            log.debug(f"eth_blockNumber query failed: {exc}")
-            return None
+        addr = result.get("contractAddress")
+        if addr and isinstance(addr, str) and addr != "0x0000000000000000000000000000000000000000":
+            return addr.lower()
+        return None
 
     def _fetch_bytecode(self, address: str) -> Optional[str]:
         """Fetch deployed bytecode. Returns hex string or None if too short."""
