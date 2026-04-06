@@ -227,6 +227,135 @@ BENIGN_CONTRACTS = [
     # ── Safe ecosystem ────────────────────────────────────────────────────────
     {"address": "0x41675C099F32341bf84BFc5382aF534df5C7461a", "network": "ethereum", "category": "multisig",          "incident": "GnosisSafeV141"},
     {"address": "0x9641d764fc13c8B624c04430C7356C1C7C8102e2", "network": "ethereum", "category": "multisig",          "incident": "GnosisSafeModuleRegistry"},
+
+    # ════════════════════════════════════════════════════════════════════════════
+    # Arbitrum One benign contracts
+    # ════════════════════════════════════════════════════════════════════════════
+    # ── Tokens ───────────────────────────────────────────────────────────────
+    {"address": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1", "network": "arbitrum", "category": "erc20-wrapped",    "incident": "WETH-Arbitrum"},
+    {"address": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", "network": "arbitrum", "category": "erc20-stablecoin",  "incident": "USDC-Arbitrum"},
+    {"address": "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9", "network": "arbitrum", "category": "erc20-stablecoin",  "incident": "USDT-Arbitrum"},
+    {"address": "0x912CE59144191C1204E64559FE8253a0e49E6548", "network": "arbitrum", "category": "erc20-governance",  "incident": "ARB-Token"},
+    # ── GMX V2 ───────────────────────────────────────────────────────────────
+    {"address": "0x7452c558d45f8afC8c83dAe62C3f8A5BE19c71f6", "network": "arbitrum", "category": "dex-router",       "incident": "GMX-V2-Router"},
+    {"address": "0xfc5A1A6EB076a2C7aD06eD22C90d7E710E35ad0a", "network": "arbitrum", "category": "erc20-governance",  "incident": "GMX-Token"},
+    # ── Camelot DEX ──────────────────────────────────────────────────────────
+    {"address": "0xc873fEcbd354f5A56E00E710B90EF4201db2448d", "network": "arbitrum", "category": "dex-router",       "incident": "CamelotV2Router"},
+    {"address": "0x6EcCab422D763aC031210895C81787E87B43A652", "network": "arbitrum", "category": "dex-factory",      "incident": "CamelotV2Factory"},
+    # ── Aave V3 on Arbitrum ───────────────────────────────────────────────────
+    {"address": "0x794a61358D6845594F94dc1DB02A252b5b4814aD", "network": "arbitrum", "category": "lending-pool",     "incident": "AaveV3Pool-Arbitrum"},
+    # ── Uniswap V3 on Arbitrum ────────────────────────────────────────────────
+    {"address": "0x1F98431c8aD98523631AE4a59f267346ea31F984", "network": "arbitrum", "category": "dex-factory",      "incident": "UniswapV3Factory-Arbitrum"},
+    {"address": "0xE592427A0AEce92De3Edee1F18E0157C05861564", "network": "arbitrum", "category": "dex-router",       "incident": "UniswapV3Router-Arbitrum"},
+    # ── Pendle Finance ────────────────────────────────────────────────────────
+    {"address": "0x0c880f6761F1af8d9Aa9C466984b80DAb9a8c9e8", "network": "arbitrum", "category": "yield-vault",       "incident": "PendleRouter-Arbitrum"},
+    # ── Chainlink on Arbitrum ─────────────────────────────────────────────────
+    {"address": "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612", "network": "arbitrum", "category": "oracle",           "incident": "ChainlinkETH-USD-Arbitrum"},
+    # ── Gnosis Safe on Arbitrum ───────────────────────────────────────────────
+    {"address": "0x3E5c63644E683549055b9Be8653de26E0B4CD36E", "network": "arbitrum", "category": "multisig",          "incident": "GnosisSafeL2-Arbitrum"},
+
+    # ════════════════════════════════════════════════════════════════════════════
+    # Optimism benign contracts
+    # ════════════════════════════════════════════════════════════════════════════
+    # ── Tokens ───────────────────────────────────────────────────────────────
+    {"address": "0x4200000000000000000000000000000000000006", "network": "optimism", "category": "erc20-wrapped",    "incident": "WETH-Optimism"},
+    {"address": "0x4200000000000000000000000000000000000042", "network": "optimism", "category": "erc20-governance",  "incident": "OP-Token"},
+    {"address": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85", "network": "optimism", "category": "erc20-stablecoin",  "incident": "USDC-Optimism"},
+    {"address": "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58", "network": "optimism", "category": "erc20-stablecoin",  "incident": "USDT-Optimism"},
+    # ── Velodrome V2 ──────────────────────────────────────────────────────────
+    {"address": "0xa062aE8A9c5e11aaA026fc2670B0D65cCc8B2858", "network": "optimism", "category": "dex-router",       "incident": "VelodromeV2Router"},
+    {"address": "0xF1046053aa5682b4F9a81b5481394DA16BE5FF5a", "network": "optimism", "category": "dex-factory",      "incident": "VelodromeV2Factory"},
+    # ── Aave V3 on Optimism ───────────────────────────────────────────────────
+    {"address": "0x794a61358D6845594F94dc1DB02A252b5b4814aD", "network": "optimism", "category": "lending-pool",     "incident": "AaveV3Pool-Optimism"},
+    # ── Synthetix on Optimism ─────────────────────────────────────────────────
+    {"address": "0x8700dAec35aF8Ff88c16BdF0418774303a7c96F8", "network": "optimism", "category": "erc20-governance",  "incident": "SNX-Optimism"},
+    {"address": "0x1f814091bF9F4F59D4a15C7a4feBacE6285AF2F8", "network": "optimism", "category": "protocol-infra",   "incident": "SynthetixSystemStatus-Optimism"},
+    # ── Uniswap V3 on Optimism ────────────────────────────────────────────────
+    {"address": "0x1F98431c8aD98523631AE4a59f267346ea31F984", "network": "optimism", "category": "dex-factory",      "incident": "UniswapV3Factory-Optimism"},
+    # ── Chainlink on Optimism ─────────────────────────────────────────────────
+    {"address": "0x13e3Ee699D1909E989722E753853AE30b17e08c5", "network": "optimism", "category": "oracle",           "incident": "ChainlinkETH-USD-Optimism"},
+    # ── Gnosis Safe on Optimism ───────────────────────────────────────────────
+    {"address": "0x3E5c63644E683549055b9Be8653de26E0B4CD36E", "network": "optimism", "category": "multisig",          "incident": "GnosisSafeL2-Optimism"},
+
+    # ════════════════════════════════════════════════════════════════════════════
+    # Polygon (PoS) benign contracts
+    # ════════════════════════════════════════════════════════════════════════════
+    # ── Tokens ───────────────────────────────────────────────────────────────
+    {"address": "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270", "network": "polygon", "category": "erc20-wrapped",    "incident": "WMATIC"},
+    {"address": "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619", "network": "polygon", "category": "erc20-wrapped",    "incident": "WETH-Polygon"},
+    {"address": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174", "network": "polygon", "category": "erc20-stablecoin",  "incident": "USDC-Polygon"},
+    {"address": "0xc2132D05D31c914a87C6611C10748AEb04B58e8F", "network": "polygon", "category": "erc20-stablecoin",  "incident": "USDT-Polygon"},
+    {"address": "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063", "network": "polygon", "category": "erc20-stablecoin",  "incident": "DAI-Polygon"},
+    # ── QuickSwap ─────────────────────────────────────────────────────────────
+    {"address": "0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff", "network": "polygon", "category": "dex-router",       "incident": "QuickSwapV2Router"},
+    {"address": "0x5757371414417b8C6CAad45bAeF941aBc7d3Ab32", "network": "polygon", "category": "dex-factory",      "incident": "QuickSwapV2Factory"},
+    # ── Aave V3 on Polygon ────────────────────────────────────────────────────
+    {"address": "0x794a61358D6845594F94dc1DB02A252b5b4814aD", "network": "polygon", "category": "lending-pool",     "incident": "AaveV3Pool-Polygon"},
+    # ── Uniswap V3 on Polygon ─────────────────────────────────────────────────
+    {"address": "0x1F98431c8aD98523631AE4a59f267346ea31F984", "network": "polygon", "category": "dex-factory",      "incident": "UniswapV3Factory-Polygon"},
+    # ── Chainlink on Polygon ──────────────────────────────────────────────────
+    {"address": "0xAB594600376Ec9fD91F8e885dADF0CE036862dE0", "network": "polygon", "category": "oracle",           "incident": "ChainlinkMATIC-USD-Polygon"},
+    # ── Gnosis Safe on Polygon ────────────────────────────────────────────────
+    {"address": "0x3E5c63644E683549055b9Be8653de26E0B4CD36E", "network": "polygon", "category": "multisig",          "incident": "GnosisSafeL2-Polygon"},
+
+    # ════════════════════════════════════════════════════════════════════════════
+    # Base benign contracts
+    # ════════════════════════════════════════════════════════════════════════════
+    # ── Tokens ───────────────────────────────────────────────────────────────
+    {"address": "0x4200000000000000000000000000000000000006", "network": "base", "category": "erc20-wrapped",    "incident": "WETH-Base"},
+    {"address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "network": "base", "category": "erc20-stablecoin",  "incident": "USDC-Base"},
+    {"address": "0x2Ae3F1Ec7F1F5012CFEab0185bfc7aa3cf0DEc22", "network": "base", "category": "liquid-staking",    "incident": "cbETH-Base"},
+    # ── Aerodrome (dominant Base DEX) ─────────────────────────────────────────
+    {"address": "0xcF77a3Ba9A5CA399B7c97c74d54e5b1Beb874E43", "network": "base", "category": "dex-router",       "incident": "AerodromeV2Router"},
+    {"address": "0x420DD381b31aEf6683db6B902084cB0FFECe40Da", "network": "base", "category": "dex-factory",      "incident": "AerodromeV2Factory"},
+    {"address": "0x940181a94A35A4569E4529A3CDfB74e38FD98631", "network": "base", "category": "erc20-governance",  "incident": "AERO-Token"},
+    # ── Uniswap V3 on Base ────────────────────────────────────────────────────
+    {"address": "0x33128a8fC17869897dcE68Ed026d694621f6FDfD", "network": "base", "category": "dex-factory",      "incident": "UniswapV3Factory-Base"},
+    {"address": "0x2626664c2603336E57B271c5C0b26F421741e481", "network": "base", "category": "dex-router",       "incident": "UniswapV3Router-Base"},
+    # ── Aave V3 on Base ───────────────────────────────────────────────────────
+    {"address": "0xA238Dd80C259a72e81d7e4664a9801593F98d1c5", "network": "base", "category": "lending-pool",     "incident": "AaveV3Pool-Base"},
+    # ── Chainlink on Base ─────────────────────────────────────────────────────
+    {"address": "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70", "network": "base", "category": "oracle",           "incident": "ChainlinkETH-USD-Base"},
+    # ── Gnosis Safe on Base ───────────────────────────────────────────────────
+    {"address": "0x3E5c63644E683549055b9Be8653de26E0B4CD36E", "network": "base", "category": "multisig",          "incident": "GnosisSafeL2-Base"},
+
+    # ════════════════════════════════════════════════════════════════════════════
+    # BSC (BNB Chain) benign contracts — mirrors ETH set for balanced training
+    # ════════════════════════════════════════════════════════════════════════════
+    # ── BNB / Stablecoins ─────────────────────────────────────────────────────
+    {"address": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", "network": "bsc", "category": "erc20-wrapped",    "incident": "WBNB"},
+    {"address": "0x55d398326f99059fF775485246999027B3197955", "network": "bsc", "category": "erc20-stablecoin",  "incident": "BSC-USDT"},
+    {"address": "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", "network": "bsc", "category": "erc20-stablecoin",  "incident": "BSC-USDC"},
+    {"address": "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56", "network": "bsc", "category": "erc20-stablecoin",  "incident": "BUSD-BSC"},
+    {"address": "0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3", "network": "bsc", "category": "erc20-stablecoin",  "incident": "DAI-BSC"},
+    # ── PancakeSwap V2 ────────────────────────────────────────────────────────
+    {"address": "0x10ED43C718714eb63d5aA57B78B54704E256024E", "network": "bsc", "category": "dex-router",       "incident": "PancakeSwapV2Router"},
+    {"address": "0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73", "network": "bsc", "category": "dex-factory",      "incident": "PancakeSwapV2Factory"},
+    {"address": "0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16", "network": "bsc", "category": "dex-pool",         "incident": "PancakeV2-WBNB-BUSD"},
+    {"address": "0x16b9a82891338f9bA80E2D6970FddA79D1eb0daE", "network": "bsc", "category": "dex-pool",         "incident": "PancakeV2-WBNB-USDT"},
+    # ── PancakeSwap V3 ────────────────────────────────────────────────────────
+    {"address": "0x13f4EA83D0bd40E75C8222255bc855a974568Dd4", "network": "bsc", "category": "dex-router",       "incident": "PancakeSwapV3Router"},
+    {"address": "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865", "network": "bsc", "category": "dex-factory",      "incident": "PancakeSwapV3Factory"},
+    # ── CAKE governance token ─────────────────────────────────────────────────
+    {"address": "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82", "network": "bsc", "category": "erc20-governance",  "incident": "CAKE-Token"},
+    # ── Venus Protocol (BSC lending) ──────────────────────────────────────────
+    {"address": "0xfD36E2c2a6789Db23113685031d7F16329158384", "network": "bsc", "category": "lending-pool",     "incident": "VenusComptroller"},
+    {"address": "0xA07c5b74C9B40447a954e1466938b865b6BBea36", "network": "bsc", "category": "lending-ctoken",   "incident": "vBNB-Venus"},
+    {"address": "0xecA88125a5ADbe82614ffC12D0DB554E2e2867C8", "network": "bsc", "category": "lending-ctoken",   "incident": "vUSDC-Venus"},
+    {"address": "0xfD5840Cd36d94D7229439859C0112a4185BC0255", "network": "bsc", "category": "lending-ctoken",   "incident": "vUSDT-Venus"},
+    {"address": "0x95c78222B3D6e262426483D42CfA53685A67Ab9D", "network": "bsc", "category": "lending-ctoken",   "incident": "vBUSD-Venus"},
+    # ── Biswap DEX ────────────────────────────────────────────────────────────
+    {"address": "0x3a6d8cA21D1CF76F653A67577FA0D27453350dD8", "network": "bsc", "category": "dex-router",       "incident": "BiswapRouter"},
+    {"address": "0x858E3312ed3A876947EA49d572A7C42DE08af7EE", "network": "bsc", "category": "dex-factory",      "incident": "BiswapFactory"},
+    # ── Alpaca Finance (BSC yield) ────────────────────────────────────────────
+    {"address": "0xA625AB01B08ce023B2a342Dbb12a16f2C8489A8F", "network": "bsc", "category": "yield-vault",       "incident": "AlpacaFairLaunch"},
+    {"address": "0x8F0528cE5eF7B51152A59745bEfDD91D97091d2F", "network": "bsc", "category": "erc20-governance",  "incident": "ALPACA-Token"},
+    # ── BSC bridges / infrastructure ──────────────────────────────────────────
+    {"address": "0x0000000000000000000000000000000000001004", "network": "bsc", "category": "protocol-infra",   "incident": "BSC-StakingSystem"},
+    {"address": "0x986b5E1e1755e3C2440e960477f25201B0a8bbD4", "network": "bsc", "category": "oracle",           "incident": "ChainlinkBNB-USD-BSC"},
+    # ── Gnosis Safe on BSC ────────────────────────────────────────────────────
+    {"address": "0x3E5c63644E683549055b9Be8653de26E0B4CD36E", "network": "bsc", "category": "multisig",          "incident": "GnosisSafeL2-BSC"},
+    {"address": "0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2", "network": "bsc", "category": "multisig",          "incident": "GnosisSafeProxyFactory-BSC"},
 ]
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

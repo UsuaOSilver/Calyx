@@ -296,3 +296,5 @@ data/collectors/bytecode_cache.jsonl
 data/collectors/.scraper_progress.json
 data/rag_index/
 results/
+docs/DEMO.md
+docs/calyx_midterm_report.md
