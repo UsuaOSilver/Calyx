@@ -40,12 +40,6 @@ from typing import Any, Dict, List, Optional
 # Ensure project root on path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv(Path(__file__).parent.parent / ".env")
-except ImportError:
-    pass
-
 
 # ── ANSI color helpers ────────────────────────────────────────────────────────
 
@@ -272,10 +266,10 @@ def _print_stage_details(result: Dict[str, Any]) -> None:
         ok("No AM1/AM2 findings")
 
     # Stage 5b: Pattern detector
-    am_pattern = [f for f in result.get("am_findings", []) if f["type"] in ("AM3", "AM4", "AM5", "AM7", "AM8")]
+    am345 = [f for f in result.get("am_findings", []) if f["type"] in ("AM3", "AM4", "AM5", "AM7", "AM8")]
     stage(5, "AM Pattern Detector (AM3–AM8)")
-    if am_pattern:
-        warn(f"{len(am_pattern)} AM3/AM4/AM5/AM7/AM8 finding(s)")
+    if am345:
+        warn(f"{len(am345)} pattern finding(s) (AM3–AM8)")
     else:
         ok("No AM3–AM8 pattern findings")
 
@@ -328,7 +322,7 @@ def _print_risk(result: Dict[str, Any], elapsed: float) -> None:
     bd = result.get("breakdown", {})
     if bd:
         print(f"  GNN:       {bd.get('gnn_contribution', 0.0):.3f}  "
-              f"Findings: {bd.get('findings_contribution', 0.0):.3f}  "
+              f"Findings: {bd.get('llm_contribution', 0.0):.3f}  "
               f"Txn: {bd.get('txn_contribution', 0.0):.3f}")
     print(f"  Time       : {elapsed:.2f}s")
     print()
@@ -398,11 +392,10 @@ def _print_audit_report(result: Dict[str, Any]) -> None:
         exploit = f.get("exploit_scenario", "")
         if exploit:
             print(f"    {dim('Exploit:')}")
-            if isinstance(exploit, list):
-                exploit = "\n".join(str(e) for e in exploit)
-            for line in exploit.split("\n"):
-                if line.strip():
-                    print(f"      {line.strip()}")
+            lines = exploit if isinstance(exploit, list) else exploit.split("\n")
+            for line in lines:
+                if str(line).strip():
+                    print(f"      {str(line).strip()}")
         rec = f.get("recommendation", "")
         if rec:
             print(f"    {green('Fix:')} {rec}")

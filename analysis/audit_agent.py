@@ -25,10 +25,17 @@ Multi-provider support via raw HTTP (no extra SDK dependencies):
 Provider is auto-detected from whichever key is present.  Override with
 AUDIT_PROVIDER env var.  Override model with AUDIT_MODEL.
 
+RAG augmentation (optional, automatic):
+  If the EVMbench RAG index has been built (scripts/build_rag_index.py),
+  AuditAgent auto-loads it and injects 3 similar past findings + 2 false-
+  positive distractors into every prompt (NyxLLM 2.0 ICL pattern).
+  This significantly improves weaker free-tier models (Gemini Flash, Llama-70B).
+  Pass rag=False to disable, or rag=<RAGRetriever> to use a custom instance.
+
 Usage:
     from analysis.audit_agent import AuditAgent
 
-    agent = AuditAgent()                 # auto-detect provider
+    agent = AuditAgent()                 # auto-detect provider + auto-load RAG
     report = agent.audit(pipeline_result)
 
     print(report["verdict"])             # VULNERABLE / LIKELY_VULNERABLE / CLEAN
@@ -37,6 +44,12 @@ Usage:
         print(f["title"], "—", f["severity"])
         print("  Exploit:", f["exploit_scenario"])
         print("  Fix:    ", f["recommendation"])
+
+    # Check RAG status
+    print(report.get("rag_examples_used"))  # int — 0 if RAG unavailable
+
+    # Disable RAG explicitly:
+    agent = AuditAgent(rag=False)
 
     # Convenience: check if agent is ready before running pipeline
     if AuditAgent.available():
@@ -105,12 +118,10 @@ vulnerabilities in obfuscated MEV bots and DeFi contracts via:
 5. Transaction history — on-chain evidence of real usage patterns + hot function selectors
 6. Fork-EVM validation — Anvil confirms actual exploitability by measuring ETH delta
 
-AM3/AM4/AM5/AM7/AM8 are pattern-only detections (no taint needed):
+AM3/AM4/AM5 are pattern-only detections (no taint needed):
   AM3: tx.origin used as access control (phishing risk)
   AM4: approve + transferFrom without balance check (token drain)
   AM5: callback with no return-value check (reentrancy risk)
-  AM7: permissionless SSTORE — public function writes storage without CALLER guard
-  AM8: DELEGATECALL to storage-derived target — proxy implementation slot hijack
 
 Your job:
 1. Interpret each finding in terms of attacker capability and real-world impact
@@ -130,7 +141,7 @@ Respond ONLY with valid JSON — no markdown fences, no commentary outside the J
   "vulnerability_summary": "<1-2 sentence summary of the core security issue>",
   "findings": [
     {
-      "type": "<AM1|AM2|AM3|AM4|AM5|AM7|AM8>",
+      "type": "<AM1|AM2|AM3|AM4|AM5>",
       "title": "<short, specific title>",
       "description": "<what this vulnerability is and why it exists>",
       "exploit_scenario": "<numbered steps: how an attacker exploits this>",
@@ -151,12 +162,24 @@ class AuditAgent:
 
     Instantiate once; call audit() per contract.  All state is stateless
     between calls — safe to reuse across multiple contracts.
+
+    Args:
+        rag: RAGRetriever instance, None (auto-load), or False (disable).
+             Auto-load tries detectors/claude_scanner/rag.py; silently
+             skips if chromadb/sentence-transformers are missing or the
+             index has not been built yet.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, rag=None) -> None:
         self._provider, self._api_key, self._model, self._base_url = (
             self._resolve_provider()
         )
+        if rag is False:
+            self._rag = None
+        elif rag is not None:
+            self._rag = rag
+        else:
+            self._rag = self._auto_load_rag()
 
     # ── Public API ────────────────────────────────────────────────────────
 
@@ -178,7 +201,8 @@ class AuditAgent:
         Returns:
             Audit report dict with keys:
               verdict, vulnerability_summary, findings, overall_assessment,
-              triage_recommendation, audit_notes, provider, model, error
+              triage_recommendation, audit_notes, provider, model,
+              rag_examples_used, error
         """
         if not self._api_key:
             return self._error_report(
@@ -186,7 +210,7 @@ class AuditAgent:
                 "ANTHROPIC_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, OPENAI_API_KEY"
             )
 
-        context = self._build_context(pipeline_result)
+        context, rag_count = self._build_context(pipeline_result, rag=self._rag)
         try:
             raw = self._call_llm(context)
         except Exception as exc:
@@ -194,9 +218,31 @@ class AuditAgent:
             return self._error_report(str(exc))
 
         report = self._parse_response(raw)
-        report["provider"] = self._provider
-        report["model"]    = self._model
+        report["provider"]          = self._provider
+        report["model"]             = self._model
+        report["rag_examples_used"] = rag_count
         return report
+
+    # ── RAG auto-load ─────────────────────────────────────────────────────
+
+    @staticmethod
+    def _auto_load_rag():
+        """
+        Try to load RAGRetriever from the pre-built EVMbench index.
+        Returns None silently if chromadb/sentence-transformers are missing
+        or the index has not been built yet.
+        """
+        try:
+            from detectors.claude_scanner.rag import RAGRetriever
+            r = RAGRetriever()
+            if r.is_ready():
+                log.info(f"AuditAgent: RAG index loaded ({r.count()} docs)")
+                return r
+            log.debug("AuditAgent: RAG index empty — run scripts/build_rag_index.py to enable")
+            return None
+        except Exception as e:
+            log.debug(f"AuditAgent: RAG not available ({e})")
+            return None
 
     # ── Provider resolution ───────────────────────────────────────────────
 
@@ -232,12 +278,20 @@ class AuditAgent:
     # ── Context building ──────────────────────────────────────────────────
 
     @staticmethod
-    def _build_context(result: Dict[str, Any]) -> str:
+    def _build_context(result: Dict[str, Any], rag=None):
         """
         Build the user-turn message from a pipeline result.
 
         Uses ContextBuilder if available; falls back to a compact inline summary
         so the agent always has enough data to reason from.
+
+        If rag is provided, prepends a few-shot block of similar past findings
+        (positive examples) and false-positive distractors (negative examples)
+        before the SKANF output.
+
+        Returns:
+            (context_str, rag_examples_used)  — rag_examples_used is 0 if RAG
+            was not available or returned no results.
         """
         try:
             from analysis.context_builder import ContextBuilder
@@ -254,11 +308,91 @@ class AuditAgent:
 
         addr    = result.get("address") or "(bytecode only)"
         network = result.get("network", "ethereum")
-        return (
-            f"Audit target: {addr} on {network}\n\n"
-            f"=== SKANF PIPELINE ANALYSIS OUTPUT ===\n\n"
-            f"{full_context}"
-        )
+
+        rag_block, rag_count = AuditAgent._build_rag_block(result, rag)
+
+        parts = [f"Audit target: {addr} on {network}", ""]
+        if rag_block:
+            parts += [rag_block, ""]
+        parts += ["=== SKANF PIPELINE ANALYSIS OUTPUT ===", "", full_context]
+
+        return "\n".join(parts), rag_count
+
+    @staticmethod
+    def _build_rag_block(result: Dict[str, Any], rag) -> tuple:
+        """
+        Retrieve similar past findings and false-positive distractors from RAG.
+
+        Query is built from am_findings types + descriptions so retrieval is
+        targeted to the actual patterns detected in this contract.
+
+        Returns:
+            (block_str, examples_used)  — block_str is "" if RAG unavailable.
+        """
+        if rag is None:
+            return "", 0
+
+        # Build query from detected findings
+        findings = result.get("am_findings", [])
+        query_parts = []
+        for f in findings[:5]:
+            t = f.get("type", "")
+            d = f.get("description", "")
+            if t or d:
+                query_parts.append(f"{t}: {d}")
+        if not query_parts:
+            query_parts = [
+                f"risk:{result.get('risk_level', 'UNKNOWN')}",
+                "smart contract vulnerability reentrancy access control",
+            ]
+        query = " | ".join(query_parts)[:500]
+
+        lines = []
+        total = 0
+
+        try:
+            positives = rag.retrieve(query, k=3)
+            if positives:
+                lines.append(
+                    "=== SIMILAR PAST VULNERABILITY FINDINGS (few-shot examples) ==="
+                )
+                lines.append(
+                    "These are confirmed real findings from past audits. "
+                    "Use them to calibrate severity, description quality, and exploit steps."
+                )
+                lines.append("")
+                for i, ex in enumerate(positives, 1):
+                    lines.append(
+                        f"--- Example {i} [{ex['doc_type']}] "
+                        f"(similarity={ex['similarity']:.2f}) ---"
+                    )
+                    lines.append(f"Title: {ex['title']}")
+                    lines.append(ex["text"][:600])
+                    lines.append("")
+                total += len(positives)
+        except Exception as e:
+            log.debug(f"RAG retrieve failed: {e}")
+
+        try:
+            negatives = rag.retrieve_negatives(query, k=2)
+            if negatives:
+                lines.append("=== FALSE POSITIVE PATTERNS TO AVOID ===")
+                lines.append(
+                    "These are plausible-sounding but incorrect findings from past audits. "
+                    "Do NOT report similar patterns unless you have stronger evidence."
+                )
+                lines.append("")
+                for i, ex in enumerate(negatives, 1):
+                    lines.append(
+                        f"--- False positive {i} (similarity={ex['similarity']:.2f}) ---"
+                    )
+                    lines.append(f"Title: {ex['title']}")
+                    lines.append(ex["text"][:400])
+                    lines.append("")
+        except Exception as e:
+            log.debug(f"RAG retrieve_negatives failed: {e}")
+
+        return "\n".join(lines), total
 
     @staticmethod
     def _compact_context(result: Dict[str, Any]) -> str:
@@ -421,5 +555,6 @@ class AuditAgent:
             "audit_notes":           "",
             "provider":              None,
             "model":                 None,
+            "rag_examples_used":     0,
             "error":                 message,
         }

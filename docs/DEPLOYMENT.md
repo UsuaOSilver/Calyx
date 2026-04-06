@@ -1,66 +1,200 @@
-# Deployment Guide
+# Calyx — Deployment Guide
 
-## Quick Start (Local)
+Calyx is a stateless Python pipeline. There is no database, no message queue, and
+no required cloud infrastructure. The only external services are optional API keys.
 
-```bash
-git clone https://github.com/UsuaOSilver/Calyx
-cd calyx
-pip install -r requirements.txt
-cp .env.example .env
-# Fill in ETHERSCAN_API_KEY (required for address mode)
-# Fill in one LLM key for --audit (GEMINI_API_KEY is free)
+---
 
-python scripts/demo_pipeline.py \
-  --address 0x00000000003b3cc22af3ae1eac0440bcee416b40 \
-  --audit
-```
+## Requirements
 
-## Environment Variables
+- Python 3.10+
+- `pip install -r requirements.txt`
+
+### Environment variables
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `ETHERSCAN_API_KEY` | Yes for address mode | Bytecode fetch + txn history |
-| `ETHEREUM_RPC_URL` | No | Stage 7 fork-EVM validation |
-| `ANTHROPIC_API_KEY` | No (one LLM key for --audit) | Claude audit agent |
-| `GEMINI_API_KEY` | No | Gemini 2.0 Flash (free tier) |
-| `GROQ_API_KEY` | No | Groq/Llama (free tier) |
-| `OPENAI_API_KEY` | No | GPT-4o |
+| `ETHERSCAN_API_KEY` | Yes (for address mode) | Bytecode fetch + transaction history |
+| `GEMINI_API_KEY` | Optional | AI Audit Agent (Stage 8) — free at aistudio.google.com |
+| `GROQ_API_KEY` | Optional | AI Audit Agent alternative — free at console.groq.com |
+| `ANTHROPIC_API_KEY` | Optional | AI Audit Agent — best output quality, paid |
+| `OPENAI_API_KEY` | Optional | AI Audit Agent alternative, paid |
+| `ETHEREUM_RPC_URL` | Optional | Stage 7 fork-EVM exploit validation (archive node required) |
+| `MEMPOOL_WS_URL` | Optional | Mempool monitor (`scripts/monitor.py`) — WebSocket endpoint |
+| `SOLODIT_API_KEY` | Optional | Training data collection — solodit.cyfrin.io → Settings |
+| `DUNE_API_KEY` | Optional | Training data collection — dune.com (free tier) |
 
-`ETHEREUM_RPC_URL` is optional. Stage 7 is silently skipped when unset.
+Only one LLM key is needed for Stage 8. The agent auto-selects whichever is present
+(priority: Anthropic > Gemini > Groq > OpenAI). Override with `AUDIT_PROVIDER=groq`.
 
-## RPC Providers for Stage 7 (--validate)
+> **Note:** Provider selection is fixed at startup based on which keys are present in the
+> environment. If a free-tier provider (Gemini, Groq) hits its rate limit at runtime, the
+> agent does not automatically fall back to the next provider — it returns an audit error
+> while leaving all other pipeline results intact. To switch providers without restarting,
+> set `AUDIT_PROVIDER=groq` (or `gemini` / `anthropic`) before running. Paid providers
+> (Anthropic, OpenAI) have no daily quota and are recommended for uninterrupted use.
 
-| Provider | Free plan | Archive node |
-|---|---|---|
-| Alchemy (recommended) | 300M CU/month | Yes |
-| Infura | 100k req/day | Paid only |
-| Self-hosted Reth | — | Yes |
+`ETHEREUM_RPC_URL` is only needed for `--validate`. All other stages run without it.
+Alchemy free plan works — the **same API key** serves both variables with different protocols:
 
-The SKANF author confirmed (Discord 2026-03-10) that Alchemy works as a
-drop-in alternative to a self-hosted Reth archive node.
-
-## Docker
-
-```bash
-docker build -t calyx .
-docker run \
-  -e ETHERSCAN_API_KEY=your_key \
-  -e GEMINI_API_KEY=your_key \
-  calyx \
-  python scripts/demo_pipeline.py \
-    --address 0x00000000003b3cc22af3ae1eac0440bcee416b40 --audit
+```
+ETHEREUM_RPC_URL=https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY   # HTTPS for Anvil
+MEMPOOL_WS_URL=wss://eth-mainnet.g.alchemy.com/v2/YOUR_KEY       # WebSocket for mempool
 ```
 
-## API Server
+---
+
+## Local Setup
+
+```bash
+git clone <repo-url>
+cd Calyx
+
+pip install -r requirements.txt
+
+cp .env.example .env
+# Edit .env with your keys
+```
+
+Run the demo CLI:
+
+```bash
+# Analyze a contract by address (requires ETHERSCAN_API_KEY)
+python scripts/demo_pipeline.py --address 0x00000000003b3cc22af3ae1eac0440bcee416b40
+
+# With AI audit report (requires one LLM key)
+python scripts/demo_pipeline.py --address 0x00000000003b3cc22af3ae1eac0440bcee416b40 --audit
+
+# Raw bytecode (no API key needed)
+python scripts/demo_pipeline.py --bytecode 0x608060...
+
+# With fork-EVM exploit proof (requires Anvil + ETHEREUM_RPC_URL)
+python scripts/demo_pipeline.py --address 0x... --validate --audit
+
+# Save full context report to disk
+python scripts/demo_pipeline.py --address 0x... --audit --save-context results/
+```
+
+Install Anvil (for `--validate`):
+```bash
+curl -L https://foundry.paradigm.xyz | bash && foundryup
+```
+
+---
+
+## FastAPI Server
+
+`api/server.py` exposes the pipeline over HTTP.
 
 ```bash
 uvicorn api.server:app --host 0.0.0.0 --port 8000
-# POST /analyze/address  {"address": "0x...", "network": "ethereum", "audit": true}
-# POST /analyze/bytecode {"bytecode": "0x608060...", "audit": false}
-# GET  /health
+
+# Health check
+curl http://localhost:8000/health
+
+# Analyze a contract
+curl -X POST http://localhost:8000/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"address": "0x00000000003b3cc22af3ae1eac0440bcee416b40", "audit": false}'
 ```
 
-## AWS / Kubernetes / Railway
+API docs at `http://localhost:8000/docs` (Swagger UI, auto-generated by FastAPI).
 
-See full production deployment examples (ECS, k8s manifests, Railway CLI)
-in the project README at https://github.com/UsuaOSilver/Calyx.
+---
+
+## Production Deployment
+
+The pipeline is stateless — deploy `api/server.py` anywhere Python runs.
+
+**Railway (simplest):**
+```bash
+npm install -g @railway/cli
+railway login && railway init && railway up
+```
+
+**Docker:**
+```dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+CMD ["uvicorn", "api.server:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+```bash
+docker build -t calyx .
+docker run -p 8000:8000 \
+  -e ETHERSCAN_API_KEY=your_key \
+  -e GEMINI_API_KEY=your_key \
+  calyx
+```
+
+**Resource requirements:** 2 GB RAM minimum (GNN model loading). 4 GB recommended.
+No GPU required — inference runs on CPU.
+
+---
+
+## RAG Index
+
+The AuditAgent (Stage 8) automatically loads a ChromaDB RAG index of EVMbench ground-truth
+findings to improve report quality. The pre-built index (472 documents, 9 MB) is included
+in the repo at `data/rag_index/evmbench/` — no setup required.
+
+To verify it loaded:
+
+```bash
+python scripts/build_rag_index.py --check
+# Expected: Documents: 472, Status: READY
+```
+
+To rebuild from scratch: the index source (`frontier-evals`) is a private OpenAI repository
+requiring org-level SSH access. Rebuilding is not possible on fresh machines without that
+access. The pre-built index in the repo is the canonical copy.
+
+---
+
+## GNN Model
+
+The bytecode classifier checkpoint is at `models/checkpoints/bytecode_model.pt`.
+It is loaded automatically by `BytecodeGNNAnalyzer` on first use. No training step
+is needed for deployment — the checkpoint ships with the repo.
+
+To retrain:
+```bash
+python3 models/gnn/bytecode_train.py
+```
+
+---
+
+## Training Data Collection
+
+The GNN is retrained weekly as new exploit contracts are published. See **[docs/TRAINING_DATA.md](TRAINING_DATA.md)** for the full guide.
+
+Quick start:
+```bash
+# Collect new data from DeFiHackLabs + Dune + Solodit, then retrain
+python3 scripts/weekly_data_sync.py --retrain
+
+# Dry run — shows what would be collected without writing anything
+python3 scripts/weekly_data_sync.py --dry-run
+```
+
+Keys needed for full pipeline (all optional — sync skips gracefully if missing):
+```
+SOLODIT_API_KEY=   # solodit.cyfrin.io → Settings → API Key (free)
+DUNE_API_KEY=      # dune.com (free tier — 500 credits/month)
+```
+
+A cron job (`0 2 * * 0`) is auto-configured to run every Sunday at 2am.
+
+---
+
+## Running Tests
+
+```bash
+python -m pytest tests/ -v
+# Expected: 71 passed, 5 skipped
+```
+
+The 5 skipped tests are API integration tests that require a running server.
