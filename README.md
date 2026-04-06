@@ -147,7 +147,7 @@ Dropout:     0.3
 
 ### Performance
 
-| Metric | Result | Capstone Target | Pass |
+| Metric | Result | Target | Pass |
 |--------|--------|----------------|------|
 | Test F1 | 0.859 | ≥0.85 | ✅ |
 | Test Recall | 1.000 | ≥0.90 | ✅ |
@@ -370,8 +370,3 @@ Key finding: Hybrid GNN + Static achieves strong recall (1.000); SKANF-style byt
 
 MIT — see [LICENSE](LICENSE).
 
----
-
-## Contact
-
-**Advisor:** Prof. Tillquist
